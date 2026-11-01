@@ -30,17 +30,58 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Download baksmali with fallback
+      - name: Build executable baksmali with dependencies
         shell: bash
         run: |
           set -euxo pipefail
           mkdir -p tools
-          curl -fL --retry 2 -o tools/baksmali.jar 'https://repo.maven.apache.org/maven2/org/smali/baksmali/2.5.2/baksmali-2.5.2.jar'
-          ls -lh tools/baksmali.jar
-          java -jar tools/baksmali.jar --help
+          curl -fL --retry 3 -o tools/baksmali.jar 'https://repo.maven.apache.org/maven2/org/smali/baksmali/2.5.2/baksmali-2.5.2.jar'
+          curl -fL --retry 3 -o tools/baksmali.pom 'https://repo.maven.apache.org/maven2/org/smali/baksmali/2.5.2/baksmali-2.5.2.pom'
+          cat > tools/pom.xml <<'POM'
+          <project xmlns="http://maven.apache.org/POM/4.0.0">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>hg.localization</groupId>
+            <artifactId>baksmali-tool</artifactId>
+            <version>1.0.0</version>
+            <dependencies>
+              <dependency>
+                <groupId>org.smali</groupId>
+                <artifactId>baksmali</artifactId>
+                <version>2.5.2</version>
+              </dependency>
+            </dependencies>
+            <build>
+              <plugins>
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-dependency-plugin</artifactId>
+                  <version>3.7.1</version>
+                  <executions>
+                    <execution>
+                      <id>copy-dependencies</id>
+                      <phase>package</phase>
+                      <goals><goal>copy-dependencies</goal></goals>
+                      <configuration>
+                        <outputDirectory>${project.basedir}/lib</outputDirectory>
+                      </configuration>
+                    </execution>
+                  </executions>
+                </plugin>
+              </plugins>
+            </build>
+          </project>
+          POM
+          mvn -B -f tools/pom.xml package
+          java -cp 'tools/lib/*' org.jf.baksmali.Main --help
+          mkdir -p tools/baksmali-distribution
+          cp tools/lib/*.jar tools/baksmali-distribution/
+          cat > tools/baksmali-distribution/README.txt <<'TXT'
+          Run: java -cp "lib/*" org.jf.baksmali.Main --help
+          These JARs are dependencies for baksmali 2.5.2, not a standalone executable.
+          TXT
       - name: Upload baksmali artifact
         uses: actions/upload-artifact@v4
         with:
           name: baksmali-tool
-          path: tools/baksmali.jar
+          path: tools/baksmali-distribution/
           retention-days: 7
