@@ -35,7 +35,6 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p tools
-          curl -fL --retry 2 -o tools/baksmali.jar 'https://github.com/baksmali/smali/releases/download/v3.0.10/baksmali-3.0.10-fat-release.jar' || \
           curl -fL --retry 2 -o tools/baksmali.jar 'https://repo.maven.apache.org/maven2/org/smali/baksmali/2.5.2/baksmali-2.5.2.jar'
           ls -lh tools/baksmali.jar
           java -jar tools/baksmali.jar --help
