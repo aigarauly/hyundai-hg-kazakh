@@ -8,11 +8,16 @@ on:
       - '.github/workflows/verify-localization.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: Validate XML resources
         run: |
           if test -f localization/values-kk/strings.xml; then
@@ -25,14 +30,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Download baksmali
+      - name: Download baksmali with fallback
+        shell: bash
         run: |
+          set -euxo pipefail
           mkdir -p tools
-          curl --fail --location --retry 3 --output tools/baksmali.jar https://github.com/baksmali/smali/releases/download/v3.0.10/baksmali-3.0.10-fat-release.jar
+          curl -fL --retry 2 -o tools/baksmali.jar 'https://github.com/baksmali/smali/releases/download/v3.0.10/baksmali-3.0.10-fat-release.jar' || \
+          curl -fL --retry 2 -o tools/baksmali.jar 'https://repo.maven.apache.org/maven2/org/smali/baksmali/2.5.2/baksmali-2.5.2.jar'
+          ls -lh tools/baksmali.jar
           java -jar tools/baksmali.jar --help
-      - name: Upload baksmali as build artifact
+      - name: Upload baksmali artifact
         uses: actions/upload-artifact@v4
         with:
-          name: baksmali-3.0.10
+          name: baksmali-tool
           path: tools/baksmali.jar
           retention-days: 7
