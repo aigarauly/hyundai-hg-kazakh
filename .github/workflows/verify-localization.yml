@@ -1,0 +1,33 @@
+name: Verify Kazakh localization
+
+on:
+  push:
+    paths:
+      - 'localization/**'
+      - 'scripts/**'
+      - '.github/workflows/verify-localization.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate XML resources
+        run: python3 scripts/validate_strings.py localization/values-kk/strings.xml
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download baksmali
+        run: |
+          mkdir -p tools
+          curl --fail --location --retry 3 --output tools/baksmali.jar https://github.com/baksmali/smali/releases/download/v3.0.10/baksmali-3.0.10-fat-release.jar
+          java -jar tools/baksmali.jar --help
+      - name: Upload baksmali as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: baksmali-3.0.10
+          path: tools/baksmali.jar
+          retention-days: 7
